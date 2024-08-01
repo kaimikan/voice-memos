@@ -8,6 +8,7 @@ import pyaudio
 import wave
 from pocketsphinx import AudioFile, get_model_path
 import os
+from datetime import datetime
 
 def record_audio(filename, sample_rate=44100, channels=1, chunk_size=1024):
     try:
@@ -54,8 +55,8 @@ def record_audio(filename, sample_rate=44100, channels=1, chunk_size=1024):
 # Step 3: Transcribe the Recording to Text
 def transcribe_audio(filename):
     try:
-        model_path = 'cmusphinx-n-us-5.2'  # Path to your HMM model directory
-        dic = 'cmudict-en-us.dict'           # Path to your dictionary file
+        model_path = 'cmusphinx-en-us-5.'  # Path to your HMM model directory
+        dic = 'cmudict-en-us.dict'         # Path to your dictionary file
 
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"HMM model path not found: {model_path}")
@@ -72,17 +73,38 @@ def transcribe_audio(filename):
 
         print("Transcription:")
         print(text)
-        
     except FileNotFoundError as fnfe:
-        print(f"The transcription library files were not found. The other parts of the program will continue to operate without it.")
-
-keyboard.add_hotkey('ctrl+shift+r', record_audio, args=('output.wav', 44100, 1, 1024))
-
-print("Press Ctrl+Shift+R to start recording. Press ESC to stop.")
-keyboard.wait('esc')
-
-# Transcribe the recorded audio
-transcribe_audio('output.wav')
+        print(f"{fnfe}. The transcription library files were not found. The other parts of the program will continue to operate without it.")
 
 # Step 4: Add an automatically generated date string to the filenames
+def generate_filename():
+    return datetime.now().strftime("recording_%Y%m%d_%H%M%S.wav")
+
+# Step 4.5: Put the program in a loop
+def main_loop():
+    try:
+        is_loop_done = False
+        is_text_to_be_displayed = True
+        while not is_loop_done:
+            if is_text_to_be_displayed:
+                print("Waiting for your input (Ctrl+Shift+R to start recording, BACKSPACE to exit):")
+            if keyboard.is_pressed("ctrl+shift+r"):
+                generated_recording_name = generate_filename()
+                record_audio(generated_recording_name, 44100, 1, 1024)
+                transcribe_audio(generated_recording_name)
+                is_text_to_be_displayed = True
+                continue
+            if keyboard.is_pressed("backspace"):
+                print("Pressed BACKSPACE to stop the program, bye, have a good one!")
+                is_loop_done = True
+
+            is_text_to_be_displayed = False    
+            keyboard.read_key()
+
+    except KeyboardInterrupt:
+        print("Process interrupted. Exiting...")
+
+if __name__ == "__main__":
+    main_loop()
+
 # Step 5: Make a UI for it
